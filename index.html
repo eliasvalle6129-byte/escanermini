@@ -3,74 +3,434 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escáner Facial Elias</title>
+    <title>Sistema POS Pro - Premium</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background: #0f0f0f; color: #e0e0e0; margin: 0; padding: 20px; }
-        
-        /* Estilos del menú */
-        .menu { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        .menu button { padding: 10px 15px; border-radius: 5px; border: none; background: #333; color: white; cursor: pointer; font-weight: bold; }
-        .menu button:hover, .menu button.activo { background: #3b82f6; }
+        :root {
+            --primary: #2563EB; 
+            --success: #10B981; 
+            --warning: #F59E0B; 
+            --danger: #EF4444;
+            --dark: #0F172A;    
+            --gray: #64748B;    
+            --bg: #F8FAFC;
+            --ticket-bg: #FFFFFF;
+        }
 
-        /* Contenedores de secciones */
-        .seccion { display: none; background: #1e1e1e; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .seccion.activa { display: block; }
+        body { font-family: system-ui, -apple-system, sans-serif; text-align: center; background: var(--bg); margin: 0; padding: 15px; color: var(--dark); }
 
-        .video-container { position: relative; display: inline-block; margin-top: 20px; border: 3px solid #3b82f6; border-radius: 15px; overflow: hidden; background: #000; width: 100%; max-width: 600px; }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        video { display: block; width: 100%; height: auto; }
+        /* ANIMACIONES */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-15px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes popIn { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        .pantalla { display: none; background: white; padding: 25px 20px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); margin-top: 15px; }
+        .activa { display: block; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        h2 { margin-top: 0; color: var(--dark); font-size: 24px; font-weight: 800; }
+        .info { color: var(--gray); font-size: 15px; margin-bottom: 20px; }
+
+        /* INPUTS Y BOTONES */
+        input { width: 100%; padding: 15px; margin: 8px 0; font-size: 16px; background: #F1F5F9; border: 2px solid transparent; border-radius: 12px; box-sizing: border-box; transition: all 0.3s; font-weight: 500;}
+        input:focus { border-color: var(--primary); background: white; outline: none; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
+
+        button { color: white; border: none; padding: 15px; width: 100%; font-size: 16px; border-radius: 12px; margin-top: 10px; font-weight: bold; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s; }
+        button:active { transform: scale(0.96); } 
         
-        input { padding: 12px; margin: 5px; border-radius: 5px; border: 1px solid #333; background: #2d2d2d; color: white; width: 80%; max-width: 200px; }
-        button.accion { padding: 12px 24px; border-radius: 5px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn-primary { background: var(--primary); box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25); }
+        .btn-success { background: var(--success); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25); }
+        .btn-danger { background: var(--danger); padding: 10px; font-size: 14px; width: auto; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
+        .btn-edit { background: var(--warning); padding: 10px; font-size: 14px; width: auto; color: white;}
+        .volver { background: #E2E8F0; color: var(--dark); margin-top: 20px; box-shadow: none; }
+        .alternativa { background: var(--warning); display: none; }
+
+        #readerCarga, #readerConsulta, #readerCaja { width: 100%; border-radius: 16px; overflow: hidden; margin-top: 10px; background: #000; }
         
-        #status { margin-top: 10px; color: #3b82f6; font-weight: bold; }
-        ul { list-style: none; padding: 0; text-align: left; max-width: 300px; margin: 0 auto; }
-        li { background: #2d2d2d; padding: 10px; margin: 5px 0; border-radius: 5px; border-left: 4px solid #3b82f6; }
+        /* ESTILOS RESULTADO Y FOTO */
+        .preview-img { max-width: 150px; border-radius: 12px; display: none; margin: 15px auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #resultadoConsulta { margin-top:20px; padding: 20px; background: #F8FAFC; border-radius: 16px; border: 1px dashed #CBD5E1; }
+        .precio-texto { font-size: 36px; color: var(--success); display: block; font-weight: bold; margin-top: 5px; }
+        
+        /* ESTILOS LISTA DE PRODUCTOS */
+        .lista-item { background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; text-align: left; box-shadow: 0 2px 5px rgba(0,0,0,0.02);}
+        .lista-img { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 15px; background: #F1F5F9; }
+        .lista-info { flex-grow: 1; }
+        .lista-acciones { display: flex; flex-direction: column; gap: 5px; }
+
+        /* ESTILOS CAJA REGISTRADORA */
+        .panel-total { background: var(--dark); color: white; padding: 20px; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 10px 20px rgba(15, 23, 42, 0.2); }
+        .texto-total { font-size: 16px; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px; }
+        .monto-total { font-size: 48px; font-weight: 900; color: var(--success); text-shadow: 0 2px 10px rgba(16, 185, 129, 0.3); }
+        
+        .ticket { background: var(--ticket-bg); border-radius: 16px; min-height: 150px; max-height: 350px; overflow-y: auto; border: 2px dashed #CBD5E1; padding: 10px; margin-top: 15px; }
+        .item-carrito { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #F1F5F9; animation: slideIn 0.3s ease-out; }
+        .item-carrito:last-child { border-bottom: none; }
+        .item-carrito img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; margin-right: 10px; }
+        .item-carrito-info { text-align: left; flex-grow: 1; display: flex; align-items: center;}
+        .item-precio { font-weight: bold; font-size: 18px; color: var(--dark); margin-right: 15px; }
     </style>
 </head>
 <body>
 
-    <h1>Escáner Facial Elias</h1>
-
-    <div class="menu">
-        <button id="btn-lista" onclick="cambiarSeccion('lista')">1. Lista Registradas</button>
-        <button id="btn-registro" onclick="cambiarSeccion('registro')">2. Registrar Cara</button>
-        <button id="btn-escanear" onclick="cambiarSeccion('escanear')">3. Escanear (Trasera)</button>
+    <div id="loginScreen" class="pantalla activa">
+        <h2><span style="font-size: 40px;">🛒</span><br>Sistema POS Pro</h2>
+        <input type="text" id="user" placeholder="Usuario (admin)">
+        <input type="password" id="pass" placeholder="Contraseña (admin123)">
+        <button class="btn-primary" onclick="login()">Iniciar Turno</button>
     </div>
 
-    <div id="sec-lista" class="seccion">
-        <h2>Personas Registradas</h2>
-        <ul id="lista-caras">
-            <li>Aún no hay caras registradas.</li>
-        </ul>
+    <div id="menuScreen" class="pantalla">
+        <h2>📦 Panel Central</h2>
+        <button class="btn-success" style="padding: 20px; font-size: 18px;" onclick="abrirCaja()">🛒 Abrir Caja (Vender)</button>
+        <button class="btn-primary" onclick="prepararCreacion()">➕ Gestionar Inventario</button>
+        <button class="btn-primary" style="background: var(--dark);" onclick="cambiarPantalla('scanScreen')">🔍 Verificador Rápido</button>
+        <button class="btn-primary" style="background: var(--warning); color:white;" onclick="cargarListaProductos()">📋 Ver Lista de Productos</button>
     </div>
 
-    <div id="sec-registro" class="seccion">
-        <h2>Registrar Nuevo Rostro</h2>
-        <input type="text" id="nombre" placeholder="Nombre (Elias)">
-        <input type="text" id="apellido" placeholder="Apellido (Valle)">
-        <input type="text" id="pais" placeholder="País (Argentina)">
-        <br>
-        <div style="margin-top: 15px;">
-            <button onclick="encenderCamara('user')" style="background: #555; border:none; padding:8px; color:white; border-radius:4px;">Usar Frontal</button>
-            <button onclick="encenderCamara('environment')" style="background: #555; border:none; padding:8px; color:white; border-radius:4px;">Usar Trasera</button>
+    <div id="cajaScreen" class="pantalla" style="padding: 15px;">
+        <div class="panel-total">
+            <div class="texto-total">Total a Cobrar</div>
+            <div class="monto-total" id="montoTotal">$0.00</div>
         </div>
-        <button class="accion" onclick="guardarPerfil()">GUARDAR ROSTRO</button>
+
+        <div id="readerCaja"></div>
+        <button class="btn-primary" onclick="iniciarEscaner('readerCaja', agregarAlCarrito)" id="btnLiveCaja">📸 Activar Lector de Caja</button>
+
+        <input type="file" id="fileCaja" accept="image/*" capture="camera" style="display:none" onchange="escanearFoto(event, 'readerCaja', agregarAlCarrito)">
+        <button id="btnFotoCaja" class="alternativa" onclick="document.getElementById('fileCaja').click()">📷 Lector Seguro (Alternativa)</button>
+
+        <div class="ticket" id="ticketCarrito">
+            <div style="color: #94A3B8; text-align: center; margin-top: 50px;">Escaneá un producto para añadirlo al ticket.</div>
+        </div>
+
+        <button class="btn-success" style="padding: 20px; font-size: 20px;" onclick="cobrarCarrito()">💵 COBRAR</button>
+        <button class="volver" onclick="detenerEscaner(); cambiarPantalla('menuScreen')">⬅️ Volver al Menú</button>
     </div>
 
-    <div id="sec-escanear" class="seccion">
-        <h2>Escaneo en Vivo</h2>
-        <p>Apunta la cámara a las personas para reconocerlas.</p>
-        <button class="accion" onclick="encenderCamara('environment')" style="background:#3b82f6;">Activar Cámara Trasera</button>
+    <div id="createScreen" class="pantalla">
+        <h2 id="tituloCrear">📝 Nuevo Producto</h2>
+        
+        <div id="readerCarga"></div>
+        <button class="btn-primary" onclick="iniciarEscaner('readerCarga', procesarCarga)" id="btnLiveCarga">📸 Escanear Código</button>
+        
+        <input type="file" id="fileCarga" accept="image/*" capture="camera" style="display:none" onchange="escanearFoto(event, 'readerCarga', procesarCarga)">
+        <button id="btnFotoCarga" class="alternativa" onclick="document.getElementById('fileCarga').click()">📷 Cámara Directa (Alternativa)</button>
+        
+        <div style="margin-top: 20px;">
+            <input type="text" id="codigoNuevo" placeholder="Código (Escaneá o escribí)">
+            <input type="text" id="nombreNuevo" placeholder="Nombre del Producto">
+            <input type="number" id="precioNuevo" placeholder="Precio ($)">
+            
+            <button class="volver" style="background: #CBD5E1;" onclick="document.getElementById('inputImagenProd').click()">🖼️ Elegir/Sacar Foto del Producto</button>
+            <input type="file" id="inputImagenProd" accept="image/*" style="display: none;" onchange="procesarImagenProducto(event)">
+            <img id="previewImagen" class="preview-img" src="">
+        </div>
+        
+        <button class="btn-success" onclick="guardarProducto()">💾 Guardar Producto</button>
+        <button class="volver" onclick="detenerEscaner(); cambiarPantalla('menuScreen')">⬅️ Volver</button>
     </div>
 
-    <div id="status">Cargando inteligencia artificial...</div>
+    <div id="scanScreen" class="pantalla">
+        <h2>🏷️ Verificador</h2>
+        <div id="readerConsulta"></div>
+        <button class="btn-primary" onclick="iniciarEscaner('readerConsulta', procesarConsulta)" id="btnLiveConsulta">📸 Escanear Producto</button>
 
-    <div class="video-container" id="container" style="display:none;">
-        <video id="video" autoplay muted playsinline></video>
+        <input type="file" id="fileConsulta" accept="image/*" capture="camera" style="display:none" onchange="escanearFoto(event, 'readerConsulta', procesarConsulta)">
+        <button id="btnFotoConsulta" class="alternativa" onclick="document.getElementById('fileConsulta').click()">📷 Cámara Directa (Alternativa)</button>
+
+        <div id="resultadoConsulta">
+            <span style="color: #94A3B8;">Esperando código...</span>
+        </div>
+        <button class="volver" onclick="detenerEscaner(); cambiarPantalla('menuScreen')">⬅️ Volver al Menú</button>
     </div>
 
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    <script defer src="script.js"></script>
+    <div id="listScreen" class="pantalla">
+        <h2>📋 Inventario</h2>
+        <div id="contenedorLista" style="margin-top: 20px;"></div>
+        <button class="volver" onclick="cambiarPantalla('menuScreen')">⬅️ Volver al Menú</button>
+    </div>
+
+    <script>
+        let html5QrCode;
+        let imagenBase64Actual = ""; 
+        let carrito = []; 
+        let totalCaja = 0;
+
+        // --- SISTEMA DE SONIDOS ---
+        function reproducirSonido(tipo) {
+            try {
+                let ctx = new (window.AudioContext || window.webkitAudioContext)();
+                let osc = ctx.createOscillator();
+                let gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+
+                if (tipo === 'beep') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(850, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+                    osc.start(0); osc.stop(ctx.currentTime + 0.1);
+                } else if (tipo === 'exito') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(400, ctx.currentTime); osc.frequency.setValueAtTime(600, ctx.currentTime + 0.1); osc.frequency.setValueAtTime(800, ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.4);
+                    osc.start(0); osc.stop(ctx.currentTime + 0.4);
+                } else if (tipo === 'error') {
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.2);
+                    osc.start(0); osc.stop(ctx.currentTime + 0.2);
+                }
+            } catch(e) {}
+        }
+
+        // --- NAVEGACIÓN ---
+        function cambiarPantalla(id) {
+            document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
+            document.getElementById(id).classList.add('activa');
+            document.getElementById('resultadoConsulta').innerHTML = '<span style="color: #94A3B8;">Esperando código...</span>';
+        }
+
+        function login() {
+            if (document.getElementById('user').value === 'admin' && document.getElementById('pass').value === 'admin123') {
+                reproducirSonido('exito');
+                cambiarPantalla('menuScreen');
+            } else { reproducirSonido('error'); alert('Credenciales incorrectas'); }
+        }
+
+        // --- MANEJO DE IMÁGENES ---
+        function procesarImagenProducto(event) {
+            let file = event.target.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                let img = new Image();
+                img.onload = function() {
+                    let canvas = document.createElement('canvas');
+                    let scale = Math.min(300 / img.width, 1);
+                    canvas.width = img.width * scale; canvas.height = img.height * scale;
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    imagenBase64Actual = canvas.toDataURL('image/jpeg', 0.6); 
+                    document.getElementById('previewImagen').src = imagenBase64Actual;
+                    document.getElementById('previewImagen').style.display = 'block';
+                }
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- CREAR / EDITAR PRODUCTO ---
+        function prepararCreacion() {
+            document.getElementById('tituloCrear').innerText = "📝 Nuevo Producto";
+            document.getElementById('codigoNuevo').value = "";
+            document.getElementById('codigoNuevo').disabled = false;
+            document.getElementById('nombreNuevo').value = "";
+            document.getElementById('precioNuevo').value = "";
+            imagenBase64Actual = "";
+            document.getElementById('previewImagen').style.display = 'none';
+            cambiarPantalla('createScreen');
+        }
+
+        function procesarCarga(codigo) {
+            reproducirSonido('beep');
+            document.getElementById('codigoNuevo').value = codigo;
+            detenerEscaner();
+        }
+
+        function guardarProducto() {
+            let cod = document.getElementById('codigoNuevo').value;
+            let nom = document.getElementById('nombreNuevo').value;
+            let pre = document.getElementById('precioNuevo').value;
+
+            if (cod && nom && pre) {
+                let producto = { nombre: nom, precio: parseFloat(pre), imagen: imagenBase64Actual };
+                localStorage.setItem(cod, JSON.stringify(producto));
+                reproducirSonido('exito');
+                alert("✅ Producto guardado correctamente");
+                prepararCreacion(); 
+            } else { reproducirSonido('error'); alert("⚠️ Por favor, completá Código, Nombre y Precio."); }
+        }
+
+        // --- LISTA DE PRODUCTOS (INVENTARIO) ---
+        function cargarListaProductos() {
+            let contenedor = document.getElementById('contenedorLista');
+            contenedor.innerHTML = ""; 
+
+            if(localStorage.length === 0) {
+                contenedor.innerHTML = "<p>No hay productos guardados aún.</p>";
+                cambiarPantalla('listScreen');
+                return;
+            }
+
+            for (let i = 0; i < localStorage.length; i++) {
+                let cod = localStorage.key(i);
+                try {
+                    let prod = JSON.parse(localStorage.getItem(cod));
+                    let imgSrc = prod.imagen ? prod.imagen : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect width='100%25' height='100%25' fill='%23e2e8f0'/%3E%3C/svg%3E";
+
+                    let itemDiv = document.createElement('div');
+                    itemDiv.className = 'lista-item';
+                    itemDiv.innerHTML = `
+                        <img src="${imgSrc}" class="lista-img">
+                        <div class="lista-info">
+                            <strong>${prod.nombre}</strong><br>
+                            <span style="color:var(--success); font-weight:bold;">$${prod.precio}</span><br>
+                            <small style="color:var(--gray)">Cód: ${cod}</small>
+                        </div>
+                        <div class="lista-acciones">
+                            <button class="btn-edit" onclick="editarProducto('${cod}')">✏️ Editar</button>
+                            <button class="btn-danger" onclick="borrarProducto('${cod}')">🗑️ Quitar</button>
+                        </div>
+                    `;
+                    contenedor.appendChild(itemDiv);
+                } catch(e) { } 
+            }
+            cambiarPantalla('listScreen');
+        }
+
+        function editarProducto(cod) {
+            let prod = JSON.parse(localStorage.getItem(cod));
+            document.getElementById('tituloCrear').innerText = "✏️ Editar Producto";
+            document.getElementById('codigoNuevo').value = cod;
+            document.getElementById('codigoNuevo').disabled = true; 
+            document.getElementById('nombreNuevo').value = prod.nombre;
+            document.getElementById('precioNuevo').value = prod.precio;
+            
+            if(prod.imagen) {
+                imagenBase64Actual = prod.imagen;
+                document.getElementById('previewImagen').src = imagenBase64Actual;
+                document.getElementById('previewImagen').style.display = 'block';
+            } else {
+                imagenBase64Actual = "";
+                document.getElementById('previewImagen').style.display = 'none';
+            }
+            cambiarPantalla('createScreen');
+        }
+
+        function borrarProducto(cod) {
+            if(confirm("¿Seguro que querés eliminar el producto " + cod + "?")) {
+                localStorage.removeItem(cod);
+                cargarListaProductos(); 
+            }
+        }
+
+        // --- CAJA REGISTRADORA (POS) ---
+        function abrirCaja() {
+            carrito = []; totalCaja = 0;
+            actualizarTicket();
+            cambiarPantalla('cajaScreen');
+        }
+
+        function agregarAlCarrito(codigo) {
+            let datos = localStorage.getItem(codigo);
+            if (datos) {
+                let prod = JSON.parse(datos);
+                prod.cartId = Date.now() + Math.random(); 
+                carrito.push(prod);
+                totalCaja += parseFloat(prod.precio);
+                
+                reproducirSonido('beep');
+                actualizarTicket();
+            } else {
+                reproducirSonido('error');
+                alert("Producto no encontrado. Cód: " + codigo);
+            }
+        }
+
+        function eliminarDelCarrito(cartId, precio) {
+            carrito = carrito.filter(item => item.cartId !== cartId);
+            totalCaja -= precio;
+            if (totalCaja < 0) totalCaja = 0; 
+            actualizarTicket();
+        }
+
+        function actualizarTicket() {
+            document.getElementById('montoTotal').innerText = "$" + totalCaja.toFixed(2);
+            let ticketDiv = document.getElementById('ticketCarrito');
+            
+            if (carrito.length === 0) {
+                ticketDiv.innerHTML = '<div style="color: #94A3B8; text-align: center; margin-top: 50px;">Escaneá un producto para añadirlo al ticket.</div>';
+                return;
+            }
+
+            ticketDiv.innerHTML = "";
+            [...carrito].reverse().forEach(item => {
+                let imgSrc = item.imagen ? item.imagen : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='100%25' height='100%25' fill='%23e2e8f0'/%3E%3C/svg%3E";
+                let div = document.createElement('div');
+                div.className = 'item-carrito';
+                div.innerHTML = `
+                    <div class="item-carrito-info">
+                        <img src="${imgSrc}">
+                        <strong style="color:var(--dark); font-size:15px;">${item.nombre}</strong>
+                    </div>
+                    <div class="item-precio">$${item.precio.toFixed(2)}</div>
+                    <button class="btn-danger" onclick="eliminarDelCarrito(${item.cartId}, ${item.precio})">❌</button>
+                `;
+                ticketDiv.appendChild(div);
+            });
+        }
+
+        function cobrarCarrito() {
+            if (carrito.length === 0) {
+                reproducirSonido('error'); alert("El carrito está vacío."); return;
+            }
+            reproducirSonido('exito');
+            alert("¡Cobro exitoso!\nTotal cobrado: $" + totalCaja.toFixed(2));
+            carrito = []; totalCaja = 0;
+            actualizarTicket();
+        }
+
+        // --- VERIFICADOR RAPIDO ---
+        function procesarConsulta(codigo) {
+            reproducirSonido('beep');
+            let datos = localStorage.getItem(codigo);
+            if (datos) {
+                let prod = JSON.parse(datos);
+                let imgHTML = prod.imagen ? `<img src="${prod.imagen}" style="width:120px; border-radius:10px; margin-bottom:15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"> <br>` : "";
+                
+                document.getElementById('resultadoConsulta').innerHTML = `
+                     ${imgHTML}
+                     <span style="color:var(--dark); font-size:20px;">${prod.nombre}</span>
+                     <span class="precio-texto">$${prod.precio}</span>
+                     <small style="color:var(--gray)">Cód: ${codigo}</small>`;
+            } else {
+                reproducirSonido('error');
+                document.getElementById('resultadoConsulta').innerHTML = 
+                    `<span style="color:var(--danger); font-size:18px;">No encontrado</span><br>
+                     <small style="color:var(--gray)">Cód: ${codigo}</small>`;
+            }
+        }
+
+        // --- MOTOR MULTI-ESCÁNER ---
+        async function iniciarEscaner(elementoId, funcionCallback) {
+            detenerEscaner();
+            html5QrCode = new Html5Qrcode(elementoId);
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    { fps: 10, qrbox: { width: 250, height: 150 } },
+                    (codigo) => { funcionCallback(codigo); }
+                );
+            } catch (err) {
+                let suffix = elementoId.replace('reader', '');
+                document.getElementById('btnLive' + suffix).style.display = 'none'; 
+                document.getElementById('btnFoto' + suffix).style.display = 'block';
+            }
+        }
+
+        async function escanearFoto(event, elementoId, funcionCallback) {
+            if (event.target.files.length === 0) return;
+            try {
+                const result = await new Html5Qrcode(elementoId).scanFile(event.target.files[0], true);
+                funcionCallback(result);
+            } catch (err) { 
+                reproducirSonido('error'); 
+                alert("No se detectó ningún código en la imagen."); 
+            }
+        }
+
+        function detenerEscaner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => html5QrCode.clear()).catch(e => console.log(e));
+            }
+        }
+    </script>
 </body>
 </html>
