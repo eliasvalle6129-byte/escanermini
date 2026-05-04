@@ -2,9 +2,9 @@ const video = document.getElementById('video');
 let faceMatcher = null;
 let labeledDescriptors = [];
 
-// Cargar modelos desde tu carpeta local /models
+// Cargamos los modelos desde internet directamente
 async function cargarModelos() {
-    const MODEL_URL = '/models'; // Ruta relativa en tu repo de GitHub
+    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models'; 
     
     try {
         await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
@@ -14,7 +14,7 @@ async function cargarModelos() {
         
         startVideo();
     } catch (error) {
-        document.getElementById('status').innerText = "Error cargando modelos de la carpeta /models";
+        document.getElementById('status').innerText = "Error cargando modelos. Revisa tu conexión.";
         console.error(error);
     }
 }
@@ -23,10 +23,11 @@ function startVideo() {
     navigator.mediaDevices.getUserMedia({ video: {} })
         .then(stream => { 
             video.srcObject = stream;
-            document.getElementById('status').innerText = "Sistema Listo. Encuadra tu cara.";
+            document.getElementById('status').innerText = "Cámara lista. Encuadra tu cara y llena los datos.";
         })
         .catch(err => {
-            document.getElementById('status').innerText = "Error: No se pudo acceder a la cámara.";
+            document.getElementById('status').innerText = "Error: Da permisos de cámara en tu navegador.";
+            console.error(err);
         });
 }
 
@@ -37,23 +38,21 @@ async function guardarPerfil() {
 
     if (!nombre || !apellido) return alert("Por favor completa tus datos");
 
-    document.getElementById('status').innerText = "Escaneando... no te muevas";
+    document.getElementById('status').innerText = "Escaneando... quedate quieto";
     
-    // Detectar rostro con alta precisión
     const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
     
     if (detection) {
         const info = `${nombre} ${apellido} | ${pais}`;
         labeledDescriptors = [new faceapi.LabeledFaceDescriptors(info, [detection.descriptor])];
         faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
-        document.getElementById('status').innerText = "¡Perfil de " + nombre + " guardado!";
+        document.getElementById('status').innerText = "¡Perfil de " + nombre + " guardado con éxito!";
     } else {
-        alert("No se detectó tu cara. Asegúrate de tener buena luz.");
-        document.getElementById('status').innerText = "Reintentando...";
+        alert("No se detectó tu cara. Asegúrate de tener buena luz de frente.");
+        document.getElementById('status').innerText = "Intenta de nuevo.";
     }
 }
 
-// Escaneo en vivo una vez que el video empieza a reproducirse
 video.addEventListener('play', () => {
     const canvas = faceapi.createCanvasFromMedia(video);
     document.getElementById('container').append(canvas);
@@ -71,7 +70,6 @@ video.addEventListener('play', () => {
                 const result = faceMatcher.findBestMatch(detection.descriptor);
                 const box = detection.detection.box;
                 
-                // Dibujar el cuadro y el nombre arriba
                 const drawBox = new faceapi.draw.DrawBox(box, { 
                     label: result.toString(),
                     boxColor: '#3b82f6' 
@@ -82,4 +80,5 @@ video.addEventListener('play', () => {
     }, 100);
 });
 
-cargarModelos();
+// Iniciamos todo cuando cargue la página
+window.onload = cargarModelos;
