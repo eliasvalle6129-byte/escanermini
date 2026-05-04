@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elias Face Scanner</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background: #0f0f0f; color: #e0e0e0; margin: 0; padding: 20px; }
+        .video-container { position: relative; display: inline-block; margin-top: 20px; border: 3px solid #3b82f6; border-radius: 15px; overflow: hidden; background: #000; }
+        canvas { position: absolute; top: 0; left: 0; }
+        video { display: block; }
+        .form-group { background: #1e1e1e; padding: 20px; border-radius: 10px; display: inline-block; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        input { padding: 12px; margin: 5px; border-radius: 5px; border: 1px solid #333; background: #2d2d2d; color: white; width: 200px; }
+        button { padding: 12px 24px; border-radius: 5px; border: none; background: #3b82f6; color: white; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #2563eb; }
+        #status { margin-top: 10px; color: #10b981; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>Escáner Facial Elias</h1>
+
+    <div class="form-group">
+        <input type="text" id="nombre" placeholder="Nombre (Elias)">
+        <input type="text" id="apellido" placeholder="Apellido (Valle)">
+        <input type="text" id="pais" placeholder="País (Argentina)">
+        <br><br>
+        <button onclick="guardarPerfil()">REGISTRAR MI ROSTRO</button>
+    </div>
+
+    <div id="status">Iniciando sistema...</div>
+
+    <div class="video-container" id="container">
+        <video id="video" width="600" height="450" autoplay muted playsinline></video>
+    </div>
+
+    <script src="face-api.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
